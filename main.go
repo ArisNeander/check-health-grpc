@@ -49,14 +49,11 @@ var (
 )
 
 const (
-	// StatusInvalidArguments indicates specified invalid arguments.
-	StatusInvalidArguments = 1
-	// StatusConnectionFailure indicates connection failed.
-	StatusConnectionFailure = 2
-	// StatusRPCFailure indicates rpc failed.
-	StatusRPCFailure = 3
-	// StatusUnhealthy indicates rpc succeeded but indicates unhealthy service.
-	StatusUnhealthy = 4
+	// These variables correspond to what a Nagios plugin is expected to return
+	StatusOK = 0
+	StatusWarning = 1
+	StatusCritical = 2
+	StatusUnknown = 3
 )
 
 func init() {
@@ -80,12 +77,12 @@ func init() {
 
 	err := flagSet.Parse(os.Args[1:])
 	if err != nil {
-		os.Exit(StatusInvalidArguments)
+		os.Exit(StatusUnknown)
 	}
 
 	argError := func(s string, v ...interface{}) {
 		log.Printf("error: "+s, v...)
-		os.Exit(StatusInvalidArguments)
+		os.Exit(StatusUnknown)
 	}
 
 	if flAddr == "" {
@@ -192,7 +189,7 @@ func main() {
 		creds, err := buildCredentials(flTLSNoVerify, flTLSCACert, flTLSClientCert, flTLSClientKey, flTLSServerName)
 		if err != nil {
 			log.Printf("failed to initialize tls credentials. error=%v", err)
-			retcode = StatusInvalidArguments
+			retcode = StatusUnknown
 			return
 		}
 		opts = append(opts, grpc.WithTransportCredentials(creds))
@@ -220,7 +217,7 @@ func main() {
 		} else {
 			log.Printf("error: failed to connect service at %q: %+v", flAddr, err)
 		}
-		retcode = StatusConnectionFailure
+		retcode = StatusCritical
 		return
 	}
 	connDuration := time.Since(connStart)
@@ -243,14 +240,14 @@ func main() {
 		} else {
 			log.Printf("error: health rpc failed: %+v", err)
 		}
-		retcode = StatusRPCFailure
+		retcode = StatusCritical
 		return
 	}
 	rpcDuration := time.Since(rpcStart)
 
 	if resp.GetStatus() != healthpb.HealthCheckResponse_SERVING {
 		log.Printf("service unhealthy (responded with %q)", resp.GetStatus().String())
-		retcode = StatusUnhealthy
+		retcode = StatusCritical
 		return
 	}
 	if flVerbose {
