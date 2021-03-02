@@ -8,11 +8,14 @@ The `check-health-grpc` monitoring plugin allows you to query health of gRPC ser
 expose service their status through the [gRPC Health Checking Protocol][hc].
 
 This command-line utility makes a RPC to `/grpc.health.v1.Health/Check`. If it
-responds with a `SERVING` status, the `grpc_health_probe` will exit with
+responds with a `SERVING` status, the `check-health-grpc` will exit with
 success, otherwise it will exit with a non-zero exit code (documented below).
 
-`check-health-grpc` is meant to be used for health checking gRPC applications in
+`check-health-grpc` is meant as a plugin for Nagios-compatible monitoring systems.
+It can be used for health checking gRPC applications in
 [Kubernetes][k8s], using the [exec probes][execprobe].
+
+It is a simple fork of [grpc-health-probe][orig].
 
 **EXAMPLES**
 
@@ -65,7 +68,7 @@ implementation details. This eliminates the need for you to implement the
 Kubernetes does not natively support gRPC health checking since it does not
 favor one RPC framework over another. Similarly, HTTP health probes Kubernetes
 has is not sufficient to craft a valid gRPC request. As a solution,
-`grpc_health_probe` [can be used for Kubernetes][k8s] to health-check gRPC
+`check-health-grpc` [can be used for Kubernetes][k8s] to health-check gRPC
 servers running in the Pod.
 
 You are recommended to use [Kubernetes `exec` probes][execprobe] and define
@@ -137,6 +140,7 @@ Used are:
 
 This is not an official Google project.
 
+[orig]: https://github.com/grpc-ecosystem/grpc-health-probe
 [hc]: https://github.com/grpc/grpc/blob/master/doc/health-checking.md
 [k8s]: https://kubernetes.io/blog/2018/10/01/health-checking-grpc-servers-on-kubernetes/
 [execprobe]: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#define-a-liveness-command
