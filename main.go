@@ -81,7 +81,7 @@ func init() {
 	}
 
 	argError := func(s string, v ...interface{}) {
-		log.Printf("error: "+s, v...)
+		fmt.Printf("error: "+s, v...)
 		os.Exit(StatusUnknown)
 	}
 
@@ -175,7 +175,7 @@ func main() {
 	go func() {
 		sig := <-c
 		if sig == os.Interrupt {
-			log.Printf("cancellation received")
+			fmt.Printf("cancellation received")
 			cancel()
 			return
 		}
@@ -188,7 +188,7 @@ func main() {
 	if flTLS {
 		creds, err := buildCredentials(flTLSNoVerify, flTLSCACert, flTLSClientCert, flTLSClientKey, flTLSServerName)
 		if err != nil {
-			log.Printf("failed to initialize tls credentials. error=%v", err)
+			fmt.Printf("failed to initialize tls credentials. error=%v", err)
 			retcode = StatusUnknown
 			return
 		}
@@ -213,9 +213,9 @@ func main() {
 	conn, err := grpc.DialContext(dialCtx, flAddr, opts...)
 	if err != nil {
 		if err == context.DeadlineExceeded {
-			log.Printf("timeout: failed to connect service %q within %v", flAddr, flConnTimeout)
+			fmt.Printf("timeout: failed to connect service %q within %v", flAddr, flConnTimeout)
 		} else {
-			log.Printf("error: failed to connect service at %q: %+v", flAddr, err)
+			fmt.Printf("error: failed to connect service at %q: %+v", flAddr, err)
 		}
 		retcode = StatusCritical
 		return
@@ -234,11 +234,11 @@ func main() {
 			Service: flService})
 	if err != nil {
 		if stat, ok := status.FromError(err); ok && stat.Code() == codes.Unimplemented {
-			log.Printf("error: this server does not implement the grpc health protocol (grpc.health.v1.Health): %s", stat.Message())
+			fmt.Printf("error: this server does not implement the grpc health protocol (grpc.health.v1.Health): %s", stat.Message())
 		} else if stat, ok := status.FromError(err); ok && stat.Code() == codes.DeadlineExceeded {
-			log.Printf("timeout: health rpc did not complete within %v", flRPCTimeout)
+			fmt.Printf("timeout: health rpc did not complete within %v", flRPCTimeout)
 		} else {
-			log.Printf("error: health rpc failed: %+v", err)
+			fmt.Printf("error: health rpc failed: %+v", err)
 		}
 		retcode = StatusCritical
 		return
@@ -246,12 +246,12 @@ func main() {
 	rpcDuration := time.Since(rpcStart)
 
 	if resp.GetStatus() != healthpb.HealthCheckResponse_SERVING {
-		log.Printf("service unhealthy (responded with %q)", resp.GetStatus().String())
+		fmt.Printf("service unhealthy (responded with %q)", resp.GetStatus().String())
 		retcode = StatusCritical
 		return
 	}
 	if flVerbose {
 		log.Printf("time elapsed: connect=%v rpc=%v", connDuration, rpcDuration)
 	}
-	log.Printf("status: %v", resp.GetStatus().String())
+	fmt.Printf("status: %v", resp.GetStatus().String())
 }
