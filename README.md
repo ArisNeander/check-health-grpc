@@ -1,28 +1,28 @@
-# grpc_health_probe(1)
+# check-health-grpc(1)
 
 ![ci](https://github.com/grpc-ecosystem/grpc-health-probe/workflows/ci/badge.svg)
 ![GitHub all releases](https://img.shields.io/github/downloads/grpc-ecosystem/grpc-health-probe/total)
 
 
-The `grpc_health_probe` utility allows you to query health of gRPC services that
+The `check-health-grpc` monitoring plugin allows you to query health of gRPC services that
 expose service their status through the [gRPC Health Checking Protocol][hc].
 
 This command-line utility makes a RPC to `/grpc.health.v1.Health/Check`. If it
 responds with a `SERVING` status, the `grpc_health_probe` will exit with
 success, otherwise it will exit with a non-zero exit code (documented below).
 
-`grpc_health_probe` is meant to be used for health checking gRPC applications in
+`check-health-grpc` is meant to be used for health checking gRPC applications in
 [Kubernetes][k8s], using the [exec probes][execprobe].
 
 **EXAMPLES**
 
 ```text
-$ grpc_health_probe -addr=localhost:5000
+$ check-health-grpc -addr=localhost:5000
 healthy: SERVING
 ```
 
 ```text
-$ grpc_health_probe -addr=localhost:9999 -connect-timeout 250ms -rpc-timeout 100ms
+$ check-health-grpc -addr=localhost:9999 -connect-timeout 250ms -rpc-timeout 100ms
 failed to connect service at "localhost:9999": context deadline exceeded
 exit status 2
 ```
@@ -30,18 +30,19 @@ exit status 2
 ## Installation
 
 **It is recommended** to use a version-stamped binary distribution:
+  (Please note that binary distribution has not been set up for this fork yet)
 
 - Choose a binary from the [Releases][rel] page.
 
 Installing from source (not recommended):
 
 - Make sure you have `git` and `go` installed.
-- Run: `go get github.com/grpc-ecosystem/grpc-health-probe`
+- Run: `go get github.com/ArisNeander/check-health-grpc`
 - This will compile the binary into your `$GOPATH/bin` (or `$HOME/go/bin`).
 
 ## Using the gRPC Health Checking Protocol
 
-To make use of the `grpc_health_probe`, your application must implement the
+To make use of the `check-health-grpc`, your application must implement the
 [gRPC Health Checking Protocol v1][hc]. This means you must to register the
 `Health` service and implement the `rpc Check` that returns a `SERVING` status.
 
@@ -70,42 +71,10 @@ servers running in the Pod.
 You are recommended to use [Kubernetes `exec` probes][execprobe] and define
 liveness and/or readiness checks for your gRPC server pods.
 
-You can bundle the statically compiled `grpc_health_probe` in your container
-image. Choose a [binary release][rel] and download it in your Dockerfile:
-
-```
-RUN GRPC_HEALTH_PROBE_VERSION=v0.3.1 && \
-    wget -qO/bin/grpc_health_probe https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/${GRPC_HEALTH_PROBE_VERSION}/grpc_health_probe-linux-amd64 && \
-    chmod +x /bin/grpc_health_probe
-```
-
-In your Kubernetes Pod specification manifest, specify a `livenessProbe` and/or
-`readinessProbe` for the container:
-
-```yaml
-spec:
-  containers:
-  - name: server
-    image: "[YOUR-DOCKER-IMAGE]"
-    ports:
-    - containerPort: 5000
-    readinessProbe:
-      exec:
-        command: ["/bin/grpc_health_probe", "-addr=:5000"]
-      initialDelaySeconds: 5
-    livenessProbe:
-      exec:
-        command: ["/bin/grpc_health_probe", "-addr=:5000"]
-      initialDelaySeconds: 10
-```
-
-This approach provide proper readiness/liveness checking to your applications
-that implement the [gRPC Health Checking Protocol][hc].
-
 ## Health Checking TLS Servers
 
 If a gRPC server is serving traffic over TLS, or uses TLS client authentication
-to authorize clients, you can still use `grpc_health_probe` to check health
+to authorize clients, you can still use `check-health-grpc` to check health
 with command-line options:
 
 | Option | Description |
@@ -124,7 +93,7 @@ with command-line options:
 | **`-v`**    | verbose logs (default: false) |
 | **`-connect-timeout`** | timeout for establishing connection |
 | **`-rpc-timeout`** | timeout for health check rpc |
-| **`-user-agent`** | user-agent header value of health check requests (default: grpc_health_probe) |
+| **`-user-agent`** | user-agent header value of health check requests (default: check-health-grpc) |
 | **`-service`** | service name to check (default: "") - empty string is convention for server health |
 | **`-gzip`** | use GZIPCompressor for requests and GZIPDecompressor for response (default: false) |
 
@@ -136,13 +105,13 @@ with command-line options:
 
        go run server/server.go -tls
 
-2. Run `grpc_client_probe` with the [CA
+2. Run `check-health-grpc` with the [CA
    certificate](https://github.com/grpc/grpc-go/blob/be59908d40f00be3573a50284c3863f1a37b8528/testdata/ca.pem)
    (in the `testdata/` directory) and hostname override the
    [cert](https://github.com/grpc/grpc-go/blob/be59908d40f00be3573a50284c3863f1a37b8528/testdata/server1.pem) is signed for:
 
       ```sh
-      $ grpc_health_probe -addr 127.0.0.1:10000 \
+      $ check-health-grpc -addr 127.0.0.1:10000 \
           -tls \
           -tls-ca-cert /path/to/testdata/ca.pem \
           -tls-server-name=x.test.youtube.com
@@ -152,16 +121,17 @@ with command-line options:
 
 ## Exit codes
 
-It is not recommended to rely on specific exit statuses. Any failure will be
-a non-zero exit code.
+This utility returns Nagios return codes.
+
+Used are:
 
 | Exit Code | Description |
 |:-----------:|-------------|
-| **0** | success: rpc response is `SERVING`. |
-| **1** | failure: invalid command-line arguments |
-| **2** | failure: connection failed or timed out |
-| **3** | failure: rpc failed or timed out |
-| **4** | failure: rpc successful, but the response is not `SERVING` |
+| **0** | success: rpc response is `SERVING`. (Status: OK)|
+| **3** | failure: invalid command-line arguments  (Status: UNKNOWN)|
+| **2** | failure: connection failed or timed out (Status: CRITICAL)|
+| **2** | failure: rpc failed or timed out (Status: CRITICAL)|
+| **2** | failure: rpc successful, but the response is not `SERVING` (Status: CRITICAL)|
 
 ----
 
