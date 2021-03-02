@@ -61,7 +61,7 @@ func init() {
 	log.SetFlags(0)
 	flagSet.StringVar(&flAddr, "addr", "", "(required) tcp host:port to connect")
 	flagSet.StringVar(&flService, "service", "", "service name to check (default: \"\")")
-	flagSet.StringVar(&flUserAgent, "user-agent", "grpc_health_probe", "user-agent header value of health check requests")
+	flagSet.StringVar(&flUserAgent, "user-agent", "check-health-grpc", "user-agent header value of health check requests")
 	// timeouts
 	flagSet.DurationVar(&flConnTimeout, "connect-timeout", time.Second, "timeout for establishing connection")
 	flagSet.DurationVar(&flRPCTimeout, "rpc-timeout", time.Second, "timeout for health check rpc")
@@ -81,7 +81,7 @@ func init() {
 	}
 
 	argError := func(s string, v ...interface{}) {
-		fmt.Printf("error: "+s, v...)
+		fmt.Printf("Error: "+s, v...)
 		os.Exit(StatusUnknown)
 	}
 
@@ -95,32 +95,32 @@ func init() {
 		argError("-rpc-timeout must be greater than zero (specified: %v)", flRPCTimeout)
 	}
 	if !flTLS && flTLSNoVerify {
-		argError("specified -tls-no-verify without specifying -tls")
+		argError("Specified -tls-no-verify without specifying -tls")
 	}
 	if !flTLS && flTLSCACert != "" {
-		argError("specified -tls-ca-cert without specifying -tls")
+		argError("Specified -tls-ca-cert without specifying -tls")
 	}
 	if !flTLS && flTLSClientCert != "" {
-		argError("specified -tls-client-cert without specifying -tls")
+		argError("Specified -tls-client-cert without specifying -tls")
 	}
 	if !flTLS && flTLSServerName != "" {
-		argError("specified -tls-server-name without specifying -tls")
+		argError("Specified -tls-server-name without specifying -tls")
 	}
 	if flTLSClientCert != "" && flTLSClientKey == "" {
-		argError("specified -tls-client-cert without specifying -tls-client-key")
+		argError("Specified -tls-client-cert without specifying -tls-client-key")
 	}
 	if flTLSClientCert == "" && flTLSClientKey != "" {
-		argError("specified -tls-client-key without specifying -tls-client-cert")
+		argError("Specified -tls-client-key without specifying -tls-client-cert")
 	}
 	if flTLSNoVerify && flTLSCACert != "" {
-		argError("cannot specify -tls-ca-cert with -tls-no-verify (CA cert would not be used)")
+		argError("Cannot specify -tls-ca-cert with -tls-no-verify (CA cert would not be used)")
 	}
 	if flTLSNoVerify && flTLSServerName != "" {
-		argError("cannot specify -tls-server-name with -tls-no-verify (server name would not be used)")
+		argError("Cannot specify -tls-server-name with -tls-no-verify (server name would not be used)")
 	}
 
 	if flVerbose {
-		log.Printf("parsed options:")
+		log.Printf("Parsed options:")
 		log.Printf("> addr=%s conn_timeout=%v rpc_timeout=%v", flAddr, flConnTimeout, flRPCTimeout)
 		log.Printf("> tls=%v", flTLS)
 		if flTLS {
@@ -139,7 +139,7 @@ func buildCredentials(skipVerify bool, caCerts, clientCert, clientKey, serverNam
 	if clientCert != "" && clientKey != "" {
 		keyPair, err := tls.LoadX509KeyPair(clientCert, clientKey)
 		if err != nil {
-			return nil, fmt.Errorf("failed to load tls client cert/key pair. error=%v", err)
+			return nil, fmt.Errorf("Failed to load tls client cert/key pair. error=%v", err)
 		}
 		cfg.Certificates = []tls.Certificate{keyPair}
 	}
@@ -151,10 +151,10 @@ func buildCredentials(skipVerify bool, caCerts, clientCert, clientKey, serverNam
 		rootCAs := x509.NewCertPool()
 		pem, err := ioutil.ReadFile(caCerts)
 		if err != nil {
-			return nil, fmt.Errorf("failed to load root CA certificates from file (%s) error=%v", caCerts, err)
+			return nil, fmt.Errorf("Failed to load root CA certificates from file (%s) error=%v", caCerts, err)
 		}
 		if !rootCAs.AppendCertsFromPEM(pem) {
-			return nil, fmt.Errorf("no root CA certs parsed from file %s", caCerts)
+			return nil, fmt.Errorf("No root CA certs parsed from file %s", caCerts)
 		}
 		cfg.RootCAs = rootCAs
 	}
@@ -175,7 +175,7 @@ func main() {
 	go func() {
 		sig := <-c
 		if sig == os.Interrupt {
-			fmt.Printf("cancellation received")
+			fmt.Printf("Cancellation received")
 			cancel()
 			return
 		}
@@ -188,7 +188,7 @@ func main() {
 	if flTLS {
 		creds, err := buildCredentials(flTLSNoVerify, flTLSCACert, flTLSClientCert, flTLSClientKey, flTLSServerName)
 		if err != nil {
-			fmt.Printf("failed to initialize tls credentials. error=%v", err)
+			fmt.Printf("Failed to initialize tls credentials. error=%v\n", err)
 			retcode = StatusUnknown
 			return
 		}
@@ -213,9 +213,9 @@ func main() {
 	conn, err := grpc.DialContext(dialCtx, flAddr, opts...)
 	if err != nil {
 		if err == context.DeadlineExceeded {
-			fmt.Printf("timeout: failed to connect service %q within %v", flAddr, flConnTimeout)
+			fmt.Printf("Timeout: failed to connect service %q within %v\n", flAddr, flConnTimeout)
 		} else {
-			fmt.Printf("error: failed to connect service at %q: %+v", flAddr, err)
+			fmt.Printf("Error: failed to connect service at %q: %+v\n", flAddr, err)
 		}
 		retcode = StatusCritical
 		return
@@ -223,7 +223,7 @@ func main() {
 	connDuration := time.Since(connStart)
 	defer conn.Close()
 	if flVerbose {
-		log.Printf("connection established (took %v)", connDuration)
+		log.Printf("Connection established (took %v)", connDuration)
 	}
 
 	rpcStart := time.Now()
@@ -234,11 +234,11 @@ func main() {
 			Service: flService})
 	if err != nil {
 		if stat, ok := status.FromError(err); ok && stat.Code() == codes.Unimplemented {
-			fmt.Printf("error: this server does not implement the grpc health protocol (grpc.health.v1.Health): %s", stat.Message())
+			fmt.Printf("Error: this server does not implement the grpc health protocol (grpc.health.v1.Health): %s\n", stat.Message())
 		} else if stat, ok := status.FromError(err); ok && stat.Code() == codes.DeadlineExceeded {
-			fmt.Printf("timeout: health rpc did not complete within %v", flRPCTimeout)
+			fmt.Printf("Timeout: health rpc did not complete within %v\n", flRPCTimeout)
 		} else {
-			fmt.Printf("error: health rpc failed: %+v", err)
+			fmt.Printf("Error: health rpc failed: %+v\n", err)
 		}
 		retcode = StatusCritical
 		return
@@ -246,12 +246,12 @@ func main() {
 	rpcDuration := time.Since(rpcStart)
 
 	if resp.GetStatus() != healthpb.HealthCheckResponse_SERVING {
-		fmt.Printf("service unhealthy (responded with %q)", resp.GetStatus().String())
+		fmt.Printf("Service unhealthy (responded with %q)\n", resp.GetStatus().String())
 		retcode = StatusCritical
 		return
 	}
 	if flVerbose {
-		log.Printf("time elapsed: connect=%v rpc=%v", connDuration, rpcDuration)
+		log.Printf("Time elapsed: connect=%v rpc=%v", connDuration, rpcDuration)
 	}
-	fmt.Printf("status: %v", resp.GetStatus().String())
+	fmt.Printf("Status: %v\n", resp.GetStatus().String())
 }
