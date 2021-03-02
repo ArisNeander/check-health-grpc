@@ -1,4 +1,4 @@
-module github.com/grpc-ecosystem/grpc-health-probe
+module github.com/ArisNeander/check-health-grpc
 
 require (
 	github.com/golang/protobuf v1.4.3 // indirect
